@@ -1,6 +1,6 @@
 aiogram==3.3.0
 pandas==1.5.3
-logging==0.5.1.2
+logging==0.4.9.6
 numpy==1.23.5
 gdown==4.6.3
 scipy==1.10.0
