@@ -36,8 +36,7 @@ async def rating_buttons(bot, message: Message):
         [types.InlineKeyboardButton(text=f'{i}', callback_data=f'rating_{i}') for i in range(1, 6)]
         ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    await bot.send_message(chat_id = message.from_user.id, text = 'Пожалуйста, оцените качество наших рекомендаций')
-    await bot.send_message(chat_id = message.from_user.id, text = 'Поставьте оценку от 1 до 5 (1 - плохо, 5 - отлично):', reply_markup=keyboard)
+    await bot.send_message(chat_id = message.from_user.id, text = 'Пожалуйста, оцените качество наших рекомендаций. Поставьте оценку от 1 до 5 (1 - плохо, 5 - отлично):', reply_markup=keyboard)
     
     
 @dp.callback_query(F.data.startswith("rating_"))
@@ -55,8 +54,7 @@ async def rating_bot_buttons(bot, message: Message):
         [types.InlineKeyboardButton(text=f'{i}', callback_data=f'review_{i}') for i in range(1, 6)]
         ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    await bot.send_message(chat_id = message.from_user.id, text = "Пожалуйста, оцените качество работы бота")
-    await bot.send_message(chat_id = message.from_user.id, text = 'Поставьте оценку от 1 до 5 (1 - плохо, 5 - отлично):', reply_markup=keyboard)
+    await bot.send_message(chat_id = message.from_user.id, text = 'Пожалуйста, оцените качество работы бота. Поставьте оценку от 1 до 5 (1 - плохо, 5 - отлично):', reply_markup=keyboard)
 
 @dp.callback_query(F.data.startswith("review_"))
 async def process_game_callback(callback_query: types.CallbackQuery, bot, state: FSMContext):
