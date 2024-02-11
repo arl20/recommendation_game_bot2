@@ -115,5 +115,5 @@ def load_user_data(user_data, user_id):
     except:
         user_data[user_id] = dict()
         user_data[user_id]['list_of_games'] = set()
-        user_data[user_id]['k'] = K_GAMES
+        user_data[user_id]['k'] = 5
     return user_data
