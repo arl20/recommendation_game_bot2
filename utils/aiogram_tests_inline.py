@@ -1,7 +1,7 @@
-from typing import Callable, Dict, Iterable, List, Union
+from typing import Callable, Dict, Iterable, Union
 
 from aiogram import Router, types
-from aiogram.filters import Filter, StateFilter
+from aiogram.filters import Filter
 from aiogram.fsm.state import State
 
 from aiogram_tests.handler import TelegramEventObserverHandler
@@ -35,7 +35,7 @@ class InlineQueryHandler(TelegramEventObserverHandler):
 
     async def feed_update(self, inline_query: types.InlineQuery, *args, **kwargs) -> None:
         await self.dp.feed_update(self.bot, types.Update(update_id=12345678, inline_query=inline_query))
-        
+
 
 class ChosenInlineHandler(TelegramEventObserverHandler):
     def __init__(
