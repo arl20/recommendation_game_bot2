@@ -1,22 +1,14 @@
-from typing import Iterable
-from typing import List
-from typing import Optional
-from typing import Type
+from typing import Iterable, List, Optional, Type
 
-from aiogram import BaseMiddleware
-from aiogram import Bot
-from aiogram import Dispatcher
+from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.dispatcher.event.telegram import TelegramEventObserver
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.methods import TelegramMethod
-from aiogram.methods.base import Response
-from aiogram.methods.base import TelegramType
-from aiogram.types import Chat
-from aiogram.types import User
+from aiogram.methods.base import Response, TelegramType
+from aiogram.types import Chat, User
 
 from aiogram_tests.mocked_bot import MockedBot
-from aiogram_tests.types.dataset import CHAT
-from aiogram_tests.types.dataset import USER
+from aiogram_tests.types.dataset import CHAT, USER
 
 
 class RequestHandler:

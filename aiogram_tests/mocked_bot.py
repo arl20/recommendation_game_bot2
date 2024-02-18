@@ -1,19 +1,11 @@
 from collections import deque
-from typing import AsyncGenerator
-from typing import Deque
-from typing import Optional
-from typing import Type
-from typing import Union
+from typing import AsyncGenerator, Deque, Optional, Type, Union
 
 from aiogram import Bot
 from aiogram.client.session.base import BaseSession
 from aiogram.methods import TelegramMethod
-from aiogram.methods.base import Request
-from aiogram.methods.base import Response
-from aiogram.methods.base import TelegramType
-from aiogram.types import ResponseParameters
-from aiogram.types import UNSET
-from aiogram.types import User
+from aiogram.methods.base import Request, Response, TelegramType
+from aiogram.types import UNSET, ResponseParameters, User
 
 
 class MockedSession(BaseSession):

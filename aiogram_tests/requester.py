@@ -1,9 +1,7 @@
-from typing import Optional
-from typing import Type
+from typing import Optional, Type
 
 from aiogram.methods import TelegramMethod
-from aiogram.methods.base import Response
-from aiogram.methods.base import TelegramType
+from aiogram.methods.base import Response, TelegramType
 
 from .exceptions import MethodIsNotCalledError
 from .handler.base import RequestHandler

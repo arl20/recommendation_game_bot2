@@ -1,12 +1,7 @@
-from typing import Callable
-from typing import Dict
-from typing import Iterable
-from typing import List
-from typing import Union
+from typing import Callable, Dict, Iterable, List, Union
 
-from aiogram import types, Router
-from aiogram.filters import Filter
-from aiogram.filters import StateFilter
+from aiogram import types
+from aiogram.filters import Filter, StateFilter
 from aiogram.fsm.state import State
 
 from .base import RequestHandler
@@ -121,62 +116,3 @@ class CallbackQueryHandler(TelegramEventObserverHandler):
 
     async def feed_update(self, callback_query: types.CallbackQuery, *args, **kwargs) -> None:
         await self.dp.feed_update(self.bot, types.Update(update_id=12345678, callback_query=callback_query))
-        
-        
-class InlineQueryHandler(TelegramEventObserverHandler):
-    def __init__(
-        self,
-        callback: Callable,
-        *filters: Filter,
-        state: Union[State, str, None] = None,
-        state_data: Dict = None,
-        dp_middlewares: Iterable = None,
-        exclude_observer_methods: Iterable = None,
-        **kwargs,
-    ):
-        super().__init__(
-            callback,
-            *filters,
-            state=state,
-            state_data=state_data,
-            dp_middlewares=dp_middlewares,
-            exclude_observer_methods=exclude_observer_methods,
-            **kwargs,
-        )
-
-    def register_handler(self) -> None:
-        router = Router()
-        self.dp.include_routers(router)
-        router.inline_query.register(self._callback, *self._filters)
-
-    async def feed_update(self, inline_query: types.InlineQuery, *args, **kwargs) -> None:
-        await self.dp.feed_update(self.bot, types.Update(update_id=12345678, inline_query=inline_query))
-        
-class ChosenInlineHandler(TelegramEventObserverHandler):
-    def __init__(
-        self,
-        callback: Callable,
-        *filters: Filter,
-        state: Union[State, str, None] = None,
-        state_data: Dict = None,
-        dp_middlewares: Iterable = None,
-        exclude_observer_methods: Iterable = None,
-        **kwargs,
-    ):
-        super().__init__(
-            callback,
-            *filters,
-            state=state,
-            state_data=state_data,
-            dp_middlewares=dp_middlewares,
-            exclude_observer_methods=exclude_observer_methods,
-            **kwargs,
-        )
-
-    def register_handler(self) -> None:
-        router = Router()
-        self.dp.include_routers(router)
-        router.chosen_inline_result.register(self._callback, *self._filters)
-
-    async def feed_update(self, chosen_result: types.ChosenInlineResult, *args, **kwargs) -> None:
-        await self.dp.feed_update(self.bot, types.Update(update_id=12345678, chosen_inline_result=chosen_result))

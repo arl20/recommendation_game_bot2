@@ -1,6 +1,5 @@
 from collections.abc import Mapping
-from typing import Any
-from typing import Union
+from typing import Any, Union
 
 
 class DatasetItem(Mapping):
