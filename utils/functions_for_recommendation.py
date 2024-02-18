@@ -104,9 +104,5 @@ def load_user_data(user_data, user_id, K_GAMES):
     except FileNotFoundError:
         user_data[user_id] = dict()
         user_data[user_id]['list_of_games'] = set()
-<<<<<<< Updated upstream
-        user_data[user_id]['k'] = 5
-=======
         user_data[user_id]['k'] = K_GAMES
->>>>>>> Stashed changes
     return user_data
