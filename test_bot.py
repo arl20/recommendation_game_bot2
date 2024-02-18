@@ -13,6 +13,7 @@ from aiogram.types import (ChosenInlineResult, InlineQuery,
 from aiogram_tests import MockedBot
 from aiogram_tests.handler import CallbackQueryHandler, MessageHandler
 from aiogram_tests.types.dataset import CALLBACK_QUERY, MESSAGE, USER
+from bot import main
 from handlers.commands import (States, add_search_game, clear_list_of_game,
                                cmd_start, delete_search_game, get_list_of_game,
                                get_recommended_game, help_info,
