@@ -7,6 +7,9 @@ from aiogram.types import Message
 
 from .commands import States
 
+from utils.utils import create_user, get_conn
+
+
 router = Router()
 
 
@@ -23,10 +26,17 @@ async def process_review_callback(callback_query: types.CallbackQuery, bot, stat
 
 @router.message(States.wait_for_review)
 async def wait_review(message: Message, state: FSMContext, bot):
+    timestamp = str(datetime.datetime.fromtimestamp(time.time()))
     user_id = message.from_user.id
     text = message.text
     data = await state.get_data()
-    with open('review_history.txt', mode='a') as rfile:
-        print(f"{user_id};{str(datetime.datetime.fromtimestamp(time.time()))};{data['score']};{text}", file=rfile)
+    tunnel, conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(f"""INSERT INTO review_history (user_id, datetime, mark, review)
+                       VALUES ({user_id}, '{timestamp}', {data['score']},'{text}')""")
+    cursor.close()
+    conn.commit()
+    conn.close()
+    tunnel.stop()
     await bot.send_message(chat_id=message.from_user.id, text="Спасибо за обратную связь!")
     await state.clear()

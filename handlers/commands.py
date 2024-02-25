@@ -11,17 +11,20 @@ from aiogram.filters import Command, CommandObject
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from sshtunnel import SSHTunnelForwarder
+
+import time
+
 from utils.functions_for_recommendation import (games_chosen_to_matrix_line,
-                                                get_link,
                                                 get_new_recommendations,
                                                 get_popular_recommendations,
                                                 get_recommendations_by_game,
-                                                get_recommendations_by_user,
-                                                load_user_data)
+                                                get_recommendations_by_user)
+
+from utils.utils import get_link, create_user, load_data, get_key, get_conn
 
 router = Router()
-
-
+    
 class States(StatesGroup):
     wait_for_adding_game = State()
     wait_for_deleting_game = State()
@@ -31,11 +34,8 @@ class States(StatesGroup):
 
 
 @router.message(F.text, Command("start"))
-async def cmd_start(message: Message, K_GAMES: int, user_data: dict):
+async def cmd_start(message: Message, K_GAMES: int):
     user_id = message.from_user.id
-    user_data[user_id] = dict()
-    user_data[user_id]['list_of_games'] = set()
-    user_data[user_id]['k'] = K_GAMES
     functions = f"""Привет! Я бот. Ты можешь написать мне свои любимые игры и получить список рекомендаций.\n
 Вот список моих функций:
 /add — добавить игру в список для рекомендаций
@@ -76,7 +76,7 @@ async def cmd_start(message: Message, K_GAMES: int, user_data: dict):
         )
     ])
     await message.answer(functions, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb))
-
+    create_user(user_id=user_id, k_games=K_GAMES)
 
 @router.message(F.text, Command("review"))
 async def rating_bot_buttons(message: Message, bot):
@@ -160,26 +160,33 @@ async def delete_search_game(message: Message):
 
 
 @router.message(F.text, Command("list"))
-async def get_list_of_game(message: Message, games_info_dict: dict, user_data: dict, K_GAMES: int):
+async def get_list_of_game(message: Message, games_info_dict: dict, K_GAMES: int):
     user_id = message.from_user.id
-    if user_id not in user_data:
-        user_data = await asyncio.to_thread(load_user_data, user_data, user_id, K_GAMES)
-    if len(user_data[user_id]['list_of_games']) == 0:
+    tunnel, conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(f"select list_games from users where id = {user_id}")
+    games = cursor.fetchone()[0]
+    if len(games) == 0:
         text = '<b>Список ваших любимых игр пуст</b>\n'
     else:
-        text = '<b>Текущий список ваших любимых игр:</b>\n' + '\n'.join(sorted(map(lambda x: games_info_dict[x]['Name'], user_data[user_id]['list_of_games'])))
+        text = '<b>Текущий список ваших любимых игр:</b>\n' + '\n'.join(sorted(map(lambda x: games_info_dict[x]['Name'], games)))
+    cursor.close()
+    conn.commit()
+    conn.close()
+    tunnel.stop()
     await message.answer(text=text, parse_mode=ParseMode.HTML)
 
 
 @router.message(F.text, Command("clear"))
-async def clear_list_of_game(message: Message, user_data: dict, K_GAMES: int):
+async def clear_list_of_game(message: Message, K_GAMES: int):
     user_id = message.from_user.id
-    if user_id not in user_data:
-        with open(f'recommendation_bot_data/userdata/{user_id}.json', 'r') as file:
-            user_data[user_id] = json.load(file)
-            user_data[user_id]['list_of_games'] = set(user_data[user_id]['list_of_games'])
-            user_data[user_id]['k'] = int(user_data[user_id]['k'])
-    user_data[user_id]['list_of_games'] = set()
+    tunnel, conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(f"UPDATE users SET list_games = ARRAY[]::integer[] WHERE id = {user_id}")
+    cursor.close()
+    conn.commit()
+    conn.close()
+    tunnel.stop()
     await message.answer(
         text='Список ваших любимых игр очищен'
     )
@@ -187,20 +194,26 @@ async def clear_list_of_game(message: Message, user_data: dict, K_GAMES: int):
 
 
 @router.message(F.text, Command("set_k"))
-async def set_k_games(message: Message, command: CommandObject, user_data: dict, K_GAMES: int):
+async def set_k_games(message: Message, command: CommandObject, K_GAMES: int):
     user_id = message.from_user.id
-    if user_id not in user_data:
-        user_data = await asyncio.to_thread(load_user_data, user_data, user_id, K_GAMES)
     try:
         user_input = command.args.lower()
-        user_data[user_id]['k'] = int(user_input)
-        if user_data[user_id]['k'] > 0 and user_data[user_id]['k'] <= 20:
+        k = int(user_input)
+        if k > 0 and k <= 20:
             await message.answer(text=f'Установлено значение количества рекомендованных игр {user_input}')
-            with open(f'recommendation_bot_data/userdata/{user_id}.json', 'w') as file:
-                user_data[user_id]['list_of_games'] = list(user_data[user_id]['list_of_games'])
-                json.dump(user_data[user_id], file)
-                user_data[user_id]['list_of_games'] = set(user_data[user_id]['list_of_games'])
-            logging.log(msg=f"{user_id} set k = {user_data[user_id]['k']}", level=logging.INFO)
+            tunnel, conn = get_conn()
+            cursor = conn.cursor()
+            cursor.execute(f"select k_games from users where id = {user_id}")
+            k_games = cursor.fetchone()
+            if len(k_games) == 0:
+                create_user(user_id, k)
+            else:
+                cursor.execute(f"UPDATE users SET k_games = {k} WHERE id = {user_id}")
+            cursor.close()
+            conn.commit()
+            conn.close()
+            tunnel.stop()
+            logging.log(msg=f"{user_id} set k = {k}", level=logging.INFO)
         else:
             await message.answer("Напишите команду в формате /set_k K, где K - целое положительное число от 1 до 20")
     except (AttributeError, ValueError):
@@ -227,7 +240,6 @@ async def get_recommended_game(message: Message,
                                df,
                                games_info_dict: dict,
                                games_info_dict_by_name: dict,
-                               user_data: dict,
                                similar_games_df,
                                K_GAMES: int,
                                K_NEIGHBOURS: int,
@@ -235,15 +247,24 @@ async def get_recommended_game(message: Message,
                                app_id_to_index,
                                user_id_to_index, bot):
     user_id = message.from_user.id
-    if user_id not in user_data:
-        user_data = await asyncio.to_thread(load_user_data, user_data, user_id, K_GAMES)
+    tunnel, conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(f"select k_games, list_games from users where id = {user_id}")
+    data = cursor.fetchone()
+    if len(data) == 0:
+        create_user(user_id)
+    k_games, list_games = data[0], data[1]
+    cursor.close()
+    conn.commit()
+    conn.close()
+    tunnel.stop()
     get_game_link = partial(get_link, games_info_dict=games_info_dict)
     await message.answer(text="Отлично, сейчас мы порекомендуем вам игры! Это может занять некоторое время")
-    popular_list = await asyncio.to_thread(get_popular_recommendations, df, user_data[user_id]['k'])
+    popular_list = await asyncio.to_thread(get_popular_recommendations, df, k_games)
     popular_list_answer = '\n'.join(map(get_game_link, popular_list))
-    new_list = await asyncio.to_thread(get_new_recommendations, df, user_data[user_id]['k'])
+    new_list = await asyncio.to_thread(get_new_recommendations, df, k_games)
     new_list_answer = '\n'.join(map(get_game_link, new_list))
-    if len(user_data[user_id]['list_of_games']) == 0:
+    if len(list_games) == 0:
         await message.answer(text="""К сожалению, вы не дали мне информации
  о ваших любимых играх, поэтому я не могу сделать персональную рекомендацию. Но вы можете поиграть в самые популярные игры!""")
         await message.answer(f"""<b>Популярные игры с высоким рейтингом:</b>
@@ -252,14 +273,16 @@ async def get_recommended_game(message: Message,
 {new_list_answer}
         """, parse_mode=ParseMode.HTML)
         return
-    user_row = await asyncio.to_thread(games_chosen_to_matrix_line, user_data[user_id]['list_of_games'], df, app_id_to_index)
-    logging.log(msg=f"recommend for user {user_id}: start", level=logging.INFO)
+    logging.log(msg=f"recommend for user {user_id}: start, k_games = {k_games}", level=logging.INFO)
     recommendations_by_game = await asyncio.to_thread(get_recommendations_by_game,
                                                       similar_games_df,
-                                                      user_data[user_id]['list_of_games'], user_data[user_id]['k'])
+                                                      list_games, k_games)
+    logging.log(msg=f"recommend for user {user_id}: by game", level=logging.INFO)
+    user_row = await asyncio.to_thread(games_chosen_to_matrix_line, list_games, df, app_id_to_index)
     recommendations_by_user = await asyncio.to_thread(get_recommendations_by_user, matrix,
-                                                      user_row, K_NEIGHBOURS, user_data[user_id]['k'],
+                                                      user_row, K_NEIGHBOURS, k_games,
                                                       user_id_to_index, app_id_to_index, False)
+    logging.log(msg=f"recommend for user {user_id}: by user", level=logging.INFO)
     recommendations_by_game_answer = '\n'.join(map(get_game_link, recommendations_by_game))
     recommendations_by_user_answer = '\n'.join(map(get_game_link, recommendations_by_user))
     await message.answer(f"""<b>Пользователи, похожие на Вас, играют в:</b>
@@ -285,10 +308,17 @@ async def rating_buttons(message: Message, bot):
 
 @router.callback_query(F.data.startswith("rating_"))
 async def process_game_callback(callback_query: types.CallbackQuery, bot):
+    timestamp = str(datetime.datetime.fromtimestamp(time.time()))
     score = callback_query.data[-1]
     user_id = callback_query.from_user.id
     text = 'Спасибо за оценку!' if score == '5' else 'Спасибо за оценку! Мы будем совершенствовать наши рекомендации'
-    with open('rating_history.txt', mode='a') as rfile:
-        print(f'{user_id};{str(datetime.datetime.fromtimestamp(time.time()))};{score}', file=rfile)
+    tunnel, conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(f"""INSERT INTO rating_rec_history (user_id, datetime, score)
+                       VALUES ({user_id}, '{timestamp}', {score})""")
+    cursor.close()
+    conn.commit()
+    conn.close()
+    tunnel.stop()
     await bot.delete_message(chat_id=user_id, message_id=callback_query.message.message_id)
     await bot.send_message(user_id, text)
